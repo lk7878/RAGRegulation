@@ -1,0 +1,111 @@
+# =============================================================
+# CcVault Pipeline Configuration
+# =============================================================
+# 不含 secrets（secrets 在 .env）。这里是 pipeline 行为配置。
+
+pipeline:
+  version: "0.1"
+  name: "CcVault Auto Regulation Index"
+
+# --- OCR 分层策略 ---
+ocr:
+  # 第 1 层：pdfplumber 尝试提取原生文本
+  pdfplumber:
+    enabled: true
+    min_text_per_page_chars: 50       # 每页少于此字符数视为扫描件，走下一层
+    timeout_seconds: 30
+
+  # 第 2 层：百度云 OCR（扫描件）
+  baidu:
+    enabled: true
+    api: accurate_basic               # accurate_basic | accurate | general
+    cost_per_1000_pages_cny: 7        # 准确版约 ¥0.007/页
+    max_pages_per_file: 500
+
+  # 第 3 层：MinerU CPU（复杂表格）
+  mineru:
+    enabled: true
+    triggered_when:
+      - complex_table_detected: true
+      - baidu_ocr_confidence_lt: 0.7
+    cpu_threads: 4
+
+# --- LLM 阶段配置 ---
+llm_stages:
+  extract:
+    provider: deepseek
+    model: deepseek-chat
+    max_concurrency: 10
+    max_tokens_per_request: 8192
+    temperature: 0.1
+    enable_cache: true                # DeepSeek prompt cache
+    retry:
+      max_attempts: 3
+      backoff_seconds: [2, 8, 30]
+
+  cross_check:
+    provider: anthropic
+    model: claude-sonnet-4-6
+    use_batch_api: true               # 50% 折扣，12h 返回
+    batch_size: 100                   # 每批 100 份法规
+    temperature: 0
+    enable_prompt_caching: true       # system prompt 缓存
+
+  equivalence:
+    provider: anthropic
+    model: claude-opus-4-7
+    use_batch_api: true
+    batch_size: 50                    # 跨区关系判定成本高，批小一点
+    temperature: 0
+
+  topic_summary:
+    provider: anthropic
+    model: claude-sonnet-4-6          # 降级用 Sonnet 省钱
+    use_batch_api: true
+    batch_size: 30
+    temperature: 0.3                  # 综述允许稍多创造性
+
+  graphrag_community:
+    provider: anthropic
+    model: claude-opus-4-7
+    use_batch_api: true
+    batch_size: 50
+    temperature: 0.2
+
+# --- 质量控制 ---
+quality:
+  # 低置信度阈值
+  min_confidence_for_auto_write: medium
+  review_queue_trigger:
+    - any_field_conf_low: true
+    - total_low_conf_fields_gte: 3
+    - cross_check_mismatch: true
+
+  # Phase 2 批次划分（Day 3 跑）
+  batch_order:
+    - name: "国标 GB"
+      pattern: "**/国内法规/**/*.pdf"
+      priority: 1
+    - name: "ECE 中文"
+      pattern: "**/ECE标准/**/*.pdf"
+      priority: 2
+    - name: "欧盟"
+      pattern: "**/1.欧盟/*.pdf"
+      priority: 3
+    - name: "美国 FMVSS"
+      pattern: "**/美国*/*.pdf"
+      priority: 4
+    - name: "其余各国"
+      pattern: "**/2.其余各个国家地区/*.pdf"
+      priority: 5
+
+# --- 成本监控 ---
+cost_monitoring:
+  log_file: logs/cost_log.jsonl
+  alert_threshold_usd: 50             # 单次运行超 $50 停机确认
+  daily_cap_usd: 100
+
+# --- Dry-run 模式 ---
+dry_run:
+  enabled: false                      # true = 不调 API，只 log 要调用什么
+  sample_size: 10                     # 抽样 10 份走完全 pipeline

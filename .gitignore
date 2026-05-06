@@ -1,0 +1,69 @@
+# =============================================================
+# CcVault .gitignore
+# =============================================================
+
+# Obsidian
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/
+.obsidian/plugins/*/data.json
+.trash/
+copilot/copilot-conversations/
+
+# Smart Connections / Smart Composer
+.smart-env/
+.smart-connections/
+
+# API keys and secrets
+.env
+.env.local
+*.env.local
+**/.env
+**/.env.local
+99_SystemScripts/auto_reg_index/.env
+99_SystemScripts/auto_reg_index/.env.local
+
+# Raw source files
+00_Raw/
+
+# Pipeline artifacts
+99_SystemScripts/auto_reg_index/__pycache__/
+99_SystemScripts/auto_reg_index/.venv/
+99_SystemScripts/auto_reg_index/venv/
+99_SystemScripts/auto_reg_index/logs/
+99_SystemScripts/auto_reg_index/cache/
+99_SystemScripts/auto_reg_index/cost_log.jsonl
+99_SystemScripts/auto_reg_index/.staging/
+99_SystemScripts/auto_reg_index/.stage*/
+99_SystemScripts/auto_reg_index/.cross_check*.log
+99_SystemScripts/auto_reg_index/manifest.json
+
+# MinerU generated artifacts
+99_SystemScripts/mineru_upgrade/__pycache__/
+99_SystemScripts/mineru_upgrade/logs/
+99_SystemScripts/mineru_upgrade/outputs/
+99_SystemScripts/mineru_upgrade/_split_work/
+99_SystemScripts/mineru_upgrade/*_state.json
+
+# Python
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# LanceDB / embedding index
+99_SystemScripts/auto_reg_index/*.lance/
+99_SystemScripts/auto_reg_index/lancedb/
